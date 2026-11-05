@@ -45,7 +45,7 @@
 
 ```bash
 cd AstrBot/data/plugins
-git clone https://github.com/YOUR_NAME/astrbot_plugin_jusuo.git
+git clone https://github.com/towjf/astrbot_plugin_jusuo.git
 ```
 
 **方式三：上传 zip**
