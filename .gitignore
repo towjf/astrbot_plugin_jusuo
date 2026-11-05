@@ -1,0 +1,32 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 本地预览产物
+preview/
+*.png
+!logo.png
+!docs/images/*.png
+
+# 打包产物
+*.zip
+dist/
+build/
+*.egg-info/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 本地配置
+config.json
+*.log

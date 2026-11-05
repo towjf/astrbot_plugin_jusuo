@@ -1,0 +1,71 @@
+{
+  "supabase_url": {
+    "description": "数据接口地址",
+    "hint": "站点使用的 Supabase 地址，默认 https://db.playmmo.cn，一般不用改。",
+    "type": "string",
+    "default": "https://db.playmmo.cn"
+  },
+  "anon_key": {
+    "description": "接口 anon key",
+    "hint": "留空即使用站点内置的公开只读 key。",
+    "type": "string",
+    "default": ""
+  },
+  "default_sort_mode": {
+    "description": "默认排序方式",
+    "hint": "sale：售价（整批总价）优先；unit：单价（每件价格）优先。命令里写「单价」或「售价」可临时覆盖。",
+    "type": "string",
+    "options": [
+      "sale",
+      "unit"
+    ],
+    "default": "sale"
+  },
+  "default_min_multiplier": {
+    "description": "默认最低倍率（0 = 不过滤）",
+    "hint": "留 0 表示默认不按倍率筛选；命令里可用「倍率2」临时指定。",
+    "type": "float",
+    "default": 0
+  },
+  "default_min_level": {
+    "description": "默认最低等级（0 = 不过滤）",
+    "hint": "留 0 表示默认不按等级筛选；命令里可用「等级60」临时指定。",
+    "type": "int",
+    "default": 0
+  },
+  "max_items": {
+    "description": "每页条数",
+    "hint": "图片里每页最多显示多少条，建议 8-12；翻页用 /居所 售价 2。",
+    "type": "int",
+    "default": 10
+  },
+  "hide_limited": {
+    "description": "排除已限购条目",
+    "hint": "开启后不再显示商家已经限购（is_limit_reached）的记录，默认开启；想连限购的一起看就关掉。",
+    "type": "bool",
+    "default": true
+  },
+  "use_image": {
+    "description": "输出图片卡片",
+    "hint": "开启时用本地 Pillow 直接绘制（约 0.2 秒，离线，不联网）；关闭则直接输出纯文本。",
+    "type": "bool",
+    "default": true
+  },
+  "cache_ttl": {
+    "description": "基础数据缓存秒数",
+    "hint": "收购单价、家具预设、牧场产物名称等静态数据的缓存时长。",
+    "type": "int",
+    "default": 90
+  },
+  "fetch_limit": {
+    "description": "单次拉取条数",
+    "hint": "从接口拉取多少条在售记录后再筛选，越大越全但越慢。",
+    "type": "int",
+    "default": 300
+  },
+  "timeout": {
+    "description": "请求超时（秒）",
+    "type": "int",
+    "default": 15
+  }
+}
