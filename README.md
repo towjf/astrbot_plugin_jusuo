@@ -20,18 +20,18 @@
 
 | 菜地 · 售价优先 | 菜地 · 单价优先 |
 | --- | --- |
-| ![菜地售价](docs/images/residence-sale-pillow.png) | ![菜地单价](docs/images/residence-unit-pillow.png) |
+| ![菜地售价](docs/images/residence-sale.webp) | ![菜地单价](docs/images/residence-unit.webp) |
 
 | 牧场 · 售价优先 | 行情 · 近 24 小时 |
 | --- | --- |
-| ![牧场](docs/images/ranch-sale-pillow.png) | ![行情](docs/images/market-pillow.png) |
+| ![牧场](docs/images/ranch-sale.webp) | ![行情](docs/images/market.webp) |
 
 <details>
 <summary>更多截图</summary>
 
 | 翻页（第 2 页） | 牧场 · 单价优先 |
 | --- | --- |
-| ![翻页](docs/images/residence-page2-pillow.png) | ![牧场单价](docs/images/ranch-unit-pillow.png) |
+| ![翻页](docs/images/residence-page2.webp) | ![牧场单价](docs/images/ranch-unit.webp) |
 
 </details>
 

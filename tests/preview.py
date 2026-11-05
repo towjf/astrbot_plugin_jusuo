@@ -14,7 +14,7 @@ PLUGIN_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PLUGIN_DIR))
 
 from core.api import JusuoAPI  # noqa: E402
-from core.image import save_png  # noqa: E402
+from core.image import save_image  # noqa: E402
 from core.view import entry_card, market_card  # noqa: E402
 
 OUT = PLUGIN_DIR / "docs" / "images"
@@ -63,7 +63,7 @@ async def main() -> None:
         }
 
         for name, card in cards.items():
-            print(f"{name}: {save_png(card, OUT / (name + '-pillow.png'))}")
+            print(f"{name}: {save_image(card, OUT / (name + '.webp'))}")
     finally:
         await api.close()
 

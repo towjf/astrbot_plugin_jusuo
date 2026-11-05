@@ -367,3 +367,24 @@ def save_png(card: dict, path: str | Path) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return str(path)
+
+
+def save_image(card: dict, path: str | Path) -> str:
+    """按扩展名保存卡片：`.webp` 无损（体积约为 PNG 的 1/5）、`.jpg` 有损，其余写 PNG。"""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = render_card(card)
+    suffix = path.suffix.lower()
+    if suffix == ".webp":
+        with Image.open(BytesIO(data)) as image:
+            image.convert("RGB").save(
+                path, format="WEBP", lossless=True, method=6
+            )
+    elif suffix in {".jpg", ".jpeg"}:
+        with Image.open(BytesIO(data)) as image:
+            image.convert("RGB").save(
+                path, format="JPEG", quality=92, subsampling=0, optimize=True
+            )
+    else:
+        path.write_bytes(data)
+    return str(path)
