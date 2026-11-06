@@ -2,18 +2,17 @@
 
 适用场景：本机访问 github.com:443 超时 / 代理 `CONNECT aborted`，但 api.github.com 可达。
 
-特性：
-- **增量**：先读远端 `refs/heads/{branch}`，只重放它之后的提交，不重写已有历史；
-- **保 SHA**：把原提交的 author / committer 与时间戳一并提交，tree 内容一致，
-  因此远端生成的 commit SHA 与本地的相同；
-- **快进优先**：远端是本地祖先时用非强制更新（`PATCH refs` 不带 force）。
-
-认证复用本机 git 凭据（Git Credential Manager），不读取、不打印 token。
+关键点：
+- 远端 commit SHA 与本地不一定相同：GitHub 会把提交时区规范化成 UTC（+0000），
+  本地是 +0800，于是同样的内容算出不同哈希（tree 完全一致）。因此脚本用
+  `.git/api_push_map.json` 记录「本地 SHA → 远端 SHA」的映射，下次推送时据此
+  找到分叉点，做到增量推送、不重写远端历史。
+- 已知远端是本地某个提交的直接祖先（例如之前用真 git push 过）时，直接用该祖先为基点。
 
 用法：
-    python scripts/push_via_api.py                     # 推当前分支到 origin
-    python scripts/push_via_api.py --repo towjf/x --branch main
-    python scripts/push_via_api.py --dry-run           # 只看要推哪些提交
+    python scripts/push_via_api.py                  # 推送当前分支
+    python scripts/push_via_api.py --dry-run        # 只看要推哪些提交
+    python scripts/push_via_api.py --mirror         # 强行全量重放并覆盖远端（会重写历史）
 """
 
 from __future__ import annotations
@@ -31,6 +30,7 @@ from pathlib import Path
 
 API = "https://api.github.com"
 ROOT = Path(__file__).resolve().parents[1]
+MAP_FILE = ROOT / ".git" / "api_push_map.json"
 
 
 # ---------------------------------------------------------------- git / api
@@ -89,13 +89,26 @@ def api(path: str, token: str, method: str = "GET", payload: dict | None = None,
     raise SystemExit(f"{method} {path} 失败: {last}")
 
 
-# ---------------------------------------------------------------- 主体
+# ---------------------------------------------------------------- 映射表
+
+
+def load_map() -> dict[str, str]:
+    if MAP_FILE.is_file():
+        try:
+            return json.loads(MAP_FILE.read_text(encoding="utf-8"))
+        except ValueError:
+            return {}
+    return {}
+
+
+def save_map(mapping: dict[str, str]) -> None:
+    MAP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    MAP_FILE.write_text(json.dumps(mapping, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def commit_meta(sha: str) -> tuple[str, str, str, str, str, str]:
-    """取 author/committer 的名字、邮箱、时间（保持远端 SHA 与本地一致）。"""
     out = git("show", "-s", "--format=%an%x00%ae%x00%aI%x00%cn%x00%ce%x00%cI", sha)
-    parts = out.strip().split("\x00")
+    parts = out.rstrip("\n").split("\x00")
     if len(parts) != 6:
         raise SystemExit(f"解析提交信息失败: {sha} -> {parts}")
     return tuple(parts)  # type: ignore[return-value]
@@ -106,6 +119,7 @@ def main() -> int:
     parser.add_argument("--repo", default="", help="owner/name，默认从 origin 解析")
     parser.add_argument("--branch", default="", help="默认取当前分支")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--mirror", action="store_true", help="全量重放并强制覆盖远端分支")
     args = parser.parse_args()
 
     branch = args.branch or git("rev-parse", "--abbrev-ref", "HEAD").strip()
@@ -119,39 +133,48 @@ def main() -> int:
 
     token = get_token()
     local_head = git("rev-parse", "HEAD").strip()
+    mapping = load_map()
 
     try:
-        remote = api(f"/repos/{repo}/git/ref/heads/{branch}", token)
-        remote_head = remote["object"]["sha"]
+        remote_head = api(f"/repos/{repo}/git/ref/heads/{branch}", token)["object"]["sha"]
     except SystemExit:
         remote_head = ""
 
     if remote_head == local_head:
-        print(f"{repo}#{branch} 已是最新（{local_head[:8]}），无需推送")
+        print(f"{repo}#{branch} 已是最新（{local_head[:8]}）")
         return 0
 
-    if remote_head:
-        is_ancestor = subprocess.run(
+    # 找增量基点
+    base = ""
+    mirror = args.mirror or not remote_head
+    if remote_head and not args.mirror:
+        if remote_head in mapping.values():
+            base = next(k for k, v in mapping.items() if v == remote_head)
+            print(f"远端 {remote_head[:8]} 对应本地 {base[:8]}（来自映射表），在其后增量推送")
+        elif subprocess.run(
             ["git", "merge-base", "--is-ancestor", remote_head, local_head], cwd=ROOT
-        ).returncode
-        if is_ancestor != 0:
+        ).returncode == 0:
+            base = remote_head
+            print(f"远端 {remote_head[:8]} 是本地祖先，增量推送")
+        else:
             raise SystemExit(
-                f"远端 {remote_head[:8]} 不是本地 HEAD 的祖先，直接重放会破坏历史；"
-                "请先 git pull / 处理分叉后再推"
+                f"远端 HEAD {remote_head[:8]} 与本地历史无对应关系（映射表里也没有）。\n"
+                "如果确认要以本地为准重写远端分支，加 --mirror 再跑一次。"
             )
-        commits = git("rev-list", "--reverse", f"{remote_head}..{local_head}").split()
-        print(f"远端已有 {remote_head[:8]}，本次增量推送 {len(commits)} 个提交")
-    else:
-        commits = git("rev-list", "--reverse", "HEAD").split()
-        print(f"远端为空，全量推送 {len(commits)} 个提交")
+    elif remote_head:
+        print(f"--mirror：以本地历史覆盖远端 {branch}")
 
+    commits = git("rev-list", "--reverse", f"{base}..{local_head}" if base else "HEAD").split()
+    if not commits:
+        print("没有需要推送的提交")
+        return 0
+    print(f"本次推送 {len(commits)} 个提交：")
+    for sha in commits:
+        print("  ", sha[:8], git("log", "-1", "--pretty=%s", sha).strip()[:58])
     if args.dry_run:
-        for sha in commits:
-            print("  ", sha[:8], git("log", "-1", "--pretty=%s", sha).strip()[:60])
         return 0
 
     if not remote_head:
-        # 空仓库不允许建 blob，先塞一个占位提交
         api(
             f"/repos/{repo}/contents/.push-init",
             token,
@@ -164,7 +187,7 @@ def main() -> int:
         print("空仓库已初始化")
 
     blob_cache: dict[str, str] = {}
-    parent = remote_head or None
+    parent = base or None
     for index, sha in enumerate(commits, 1):
         message = git("log", "-1", "--pretty=%B", sha).rstrip("\n")
         items = []
@@ -199,10 +222,12 @@ def main() -> int:
             payload["parents"] = [parent]
         created = api(f"/repos/{repo}/git/commits", token, method="POST", payload=payload)
         parent = created["sha"]
-        same = "SHA 一致" if parent == sha else f"本地 {sha[:8]}"
-        print(f"  [{index}/{len(commits)}] {message.splitlines()[0][:52]} -> {parent[:8]} ({same})")
+        mapping[sha] = parent
+        save_map(mapping)
+        note = "SHA 相同" if parent == sha else f"本地 {sha[:8]}（远端时区规范化为 UTC，SHA 不同）"
+        print(f"  [{index}/{len(commits)}] {message.splitlines()[0][:50]} -> {parent[:8]}  {note}")
 
-    if remote_head:
+    if remote_head and not mirror:
         api(
             f"/repos/{repo}/git/refs/heads/{branch}",
             token,
@@ -210,6 +235,14 @@ def main() -> int:
             payload={"sha": parent},
         )
         print(f"已快进 {branch} -> {parent[:8]}")
+    elif remote_head:
+        api(
+            f"/repos/{repo}/git/refs/heads/{branch}",
+            token,
+            method="PATCH",
+            payload={"sha": parent, "force": True},
+        )
+        print(f"已强制更新 {branch} -> {parent[:8]}")
     else:
         api(
             f"/repos/{repo}/git/refs",
@@ -220,7 +253,7 @@ def main() -> int:
         print(f"已创建 {branch} -> {parent[:8]}")
 
     head = api(f"/repos/{repo}/commits/{branch}", token)
-    print(f"远端 HEAD: {head['sha'][:8]}  本地 HEAD: {local_head[:8]}  一致: {head['sha'] == local_head}")
+    print(f"远端 HEAD {head['sha'][:8]} / 本地 HEAD {local_head[:8]}（内容一致，SHA 因时区规范化可能不同）")
     return 0
 
 
