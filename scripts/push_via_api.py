@@ -152,7 +152,9 @@ def main() -> int:
             base = next(k for k, v in mapping.items() if v == remote_head)
             print(f"远端 {remote_head[:8]} 对应本地 {base[:8]}（来自映射表），在其后增量推送")
         elif subprocess.run(
-            ["git", "merge-base", "--is-ancestor", remote_head, local_head], cwd=ROOT
+            ["git", "merge-base", "--is-ancestor", remote_head, local_head],
+            cwd=ROOT,
+            capture_output=True,
         ).returncode == 0:
             base = remote_head
             print(f"远端 {remote_head[:8]} 是本地祖先，增量推送")
