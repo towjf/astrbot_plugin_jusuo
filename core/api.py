@@ -144,32 +144,6 @@ class JusuoAPI:
         )
         return self._store("ranch_presets", {r["id"]: r["name"] for r in rows})
 
-    async def furniture_presets(self) -> dict[str, dict]:
-        """家具预设 id -> {name, quality, merchant_name}。"""
-        cached = self._cached("furniture_presets")
-        if cached is not None:
-            return cached
-        rows = await self._table(
-            "furniture_presets",
-            {"select": "id,name,quality,merchant_name", "limit": 1000},
-        )
-        return self._store(
-            "furniture_presets",
-            {r["id"]: r for r in rows},
-        )
-
-    async def page_settings(self) -> dict[str, bool]:
-        """各页面开关（居所/牧场/模板等）。"""
-        cached = self._cached("page_settings")
-        if cached is not None:
-            return cached
-        rows = await self._table("page_settings", {"select": "key,enabled"})
-        return self._store(
-            "page_settings", {r["key"]: bool(r.get("enabled")) for r in rows}
-        )
-
-    # ---------------- 业务数据 ----------------
-
     async def residence_entries(self, limit: int = 300) -> list[dict]:
         """居所作物高倍收购条目（仅在售）。"""
         return await self._table(
@@ -200,38 +174,6 @@ class JusuoAPI:
                 "expires_at": "gt.now()",
                 "is_reported": "eq.false",
                 "order": "price_multiplier.desc,expires_at.desc",
-                "limit": limit,
-            },
-        )
-
-    async def furniture_entries(self, limit: int = 200) -> list[dict]:
-        """家具商人分享条目（仅在售）。"""
-        return await self._table(
-            "furniture_entries",
-            {
-                "select": (
-                    "id,merchant_name,furniture_names,furniture_ids,expires_at,"
-                    "created_at,like_count,is_limit_reached"
-                ),
-                "expires_at": "gt.now()",
-                "is_reported": "eq.false",
-                "order": "expires_at.desc",
-                "limit": limit,
-            },
-        )
-
-    async def template_entries(self, limit: int = 60) -> list[dict]:
-        """居所模板分享条目（按热度排序）。"""
-        return await self._table(
-            "template_entries",
-            {
-                "select": (
-                    "id,title,description,region,like_count,favorite_count,"
-                    "heat_score,video_platform,video_url,cover_url,is_featured,"
-                    "is_timed,timed_expires_at,created_at"
-                ),
-                "is_active": "eq.true",
-                "order": "heat_score.desc,like_count.desc",
                 "limit": limit,
             },
         )

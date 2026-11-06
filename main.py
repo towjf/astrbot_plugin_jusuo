@@ -26,7 +26,7 @@ from .core.view import (
     market_card,
 )
 
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 
 HELP_ITEMS = [
     {
@@ -157,7 +157,8 @@ class JusuoPlugin(Star):
         if not _has_slash(event):
             return
         source = "crop"
-        hours = 24
+        hours = int(self.config.get("market_hours") or 24)
+        hours = max(6, min(hours, 168))
         for token in _tokens(event):
             if token in {"牧场", "ranch"}:
                 source = "ranch"
@@ -234,7 +235,7 @@ class JusuoPlugin(Star):
         except Exception as exc:  # noqa: BLE001
             lines.append(f"数据接口：失败 —— {exc}")
         lines.append(
-            "出图方式：HTML 卡片（失败自动改本地绘制）"
+            "出图方式：本地 Pillow 绘制（失败自动改纯文本）"
             if self.config.get("use_image", True)
             else "出图方式：纯文本（配置里关闭了 use_image）"
         )

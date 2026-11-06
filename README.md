@@ -96,6 +96,7 @@ git clone https://github.com/towjf/astrbot_plugin_jusuo.git
 | `hide_limited` | 排除已限购条目 | `true` |
 | `fetch_limit` | 单次拉取条数 | `300` |
 | `cache_ttl` | 基础数据缓存秒数 | `90` |
+| `market_hours` | `/行情` 默认小时数（6~168） | `24` |
 | `timeout` | 请求超时秒数 | `15` |
 | `supabase_url` | 数据接口地址 | `https://db.playmmo.cn` |
 | `anon_key` | 公开只读 key，留空用内置 | 空 |

@@ -1,5 +1,22 @@
 # 更新日志
 
+## 1.5.1
+
+### 修复
+
+- `/居所测试` 的自检文案还写着「HTML 卡片（失败自动改本地绘制）」，但 HTML 渲染链路在 1.5.0 已删除，现改为「本地 Pillow 绘制（失败自动改纯文本）」；
+- `core/image.py` 的模块说明同步去掉 t2i 说法。
+
+### 清理
+
+- 删除随着 `/家具`、`/模板`、`/单价` 命令一起废弃的空转代码：
+  `JusuoAPI.furniture_presets()`、`furniture_entries()`、`template_entries()`、`page_settings()`，
+  以及 `view.price_card()`、`view.error_card()` 与其导出。
+
+### 新增
+
+- 配置项 `market_hours`：`/行情` 不带小时参数时的默认窗口（6~168），与 gscore 版一致。
+
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## 1.5.0

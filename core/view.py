@@ -295,97 +295,6 @@ def market_card(
 # ---------------------------------------------------------------- 单价表
 
 
-def price_card(
-    residence_entries: list[dict],
-    ranch_entries: list[dict],
-    prices: dict[str, dict[str, float]],
-    *,
-    page: int = 1,
-    page_size: int = 10,
-    hide_limited: bool = True,
-) -> dict:
-    """单价表：按物品取「预计售价」（整批预估总价）的峰值，而不是基础单价。"""
-    now = datetime.now(UTC)
-    best: dict[tuple[str, str], dict] = {}
-
-    def scan(entries: list[dict], category: str, label: str, name_key: str, level_key: str):
-        unit_prices = prices.get(category, {})
-        for entry in entries:
-            if hide_limited and entry.get("is_limit_reached"):
-                continue
-            name = entry.get(name_key) or "未知物品"
-            quantity = entry.get("quantity") or 0
-            total = entry.get("sale_price") or estimate_price(
-                unit_prices.get(name),
-                entry.get(level_key),
-                entry.get("price_multiplier"),
-                quantity,
-                entry.get("guild_maxed"),
-            )
-            if not total:
-                continue
-            unit = round(total / quantity) if quantity else 0
-            key = (label, name)
-            current = best.get(key)
-            if current is None or total > current["total"]:
-                best[key] = {
-                    "label": label,
-                    "name": name,
-                    "total": float(total),
-                    "unit": float(unit),
-                    "mult": float(entry.get("price_multiplier") or 0),
-                    "level": entry.get(level_key),
-                    "level_label": "居所" if category == "crop" else "摊位",
-                    "quantity": quantity,
-                    "merchant": entry.get("merchant_name") or "-",
-                    "uid": entry.get("uid") or "",
-                    "expires_at": entry.get("expires_at"),
-                }
-
-    scan(residence_entries, "crop", "作物", "crop_name", "residence_level")
-    scan(ranch_entries, "ranch", "牧场", "product_name", "animal_stall_level")
-
-    ranked = sorted(best.values(), key=lambda item: -item["total"])
-    total_items = len(ranked)
-    pages = max(1, -(-total_items // page_size)) if total_items else 1
-    page = min(max(1, page), pages)
-    offset = (page - 1) * page_size
-    page_items = ranked[offset : offset + page_size]
-
-    card = _base_card(
-        "单价表 · 各物品预计售价",
-        f"每种物品当前在售的最高「预计售价」（整批总价），共 {total_items} 种；"
-        f"本页 {len(page_items)} 种（第 {offset + 1}-{offset + len(page_items)} 种）。",
-        [{"text": "按预计售价排序", "gold": True}, {"text": f"第 {page}/{pages} 页"}],
-    )
-    card["footer"] = f"{FOOTER} · 翻页：/单价 N"
-    card["empty_text"] = "当前没有在售记录可以估算售价。"
-
-    for index, item in enumerate(page_items, start=offset + 1):
-        card["rows"].append(
-            _row(
-                index,
-                item["name"],
-                uid=item["uid"],
-                mult=item["mult"],
-                tags=[{"text": item["label"]}],
-                meta=[
-                    f"数量 {fmt_count(item['quantity'])}",
-                    f"单价 {fmt_money(item['unit'])}",
-                    f"{item['level_label']} Lv.{item['level'] or '-'}",
-                    f"商人 {item['merchant']}",
-                ],
-                price=fmt_money(item["total"]),
-                time=_time_text(item["expires_at"], now),
-                soon=_too_soon(item["expires_at"], now),
-            )
-        )
-    return card
-
-
-# ---------------------------------------------------------------- 帮助
-
-
 def help_rows_card(items: list[dict], subtitle: str = "") -> dict:
     """帮助卡片的 Pillow 版：把命令铺成行，供本地兜底渲染。"""
     card = _base_card(
@@ -403,7 +312,3 @@ def help_rows_card(items: list[dict], subtitle: str = "") -> dict:
             )
         )
     return card
-
-
-def error_card(title: str, message: str) -> dict:
-    return _empty_card(title, message)

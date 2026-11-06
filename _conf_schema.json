@@ -67,5 +67,10 @@
     "description": "请求超时（秒）",
     "type": "int",
     "default": 15
+  },
+  "market_hours": {
+    "type": "int",
+    "description": "行情默认小时数（/行情 不带小时参数时使用，6~168）",
+    "default": 24
   }
 }

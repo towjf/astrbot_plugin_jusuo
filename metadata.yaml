@@ -12,7 +12,7 @@ desc: |
   出图为本地 Pillow 绘制（深蓝配色、PNG 直出、不联网、单张约 0.2 秒），渲染失败时自动退纯文本。
   所有命令必须带 `/` 触发，不带斜杠的消息按普通聊天处理。
 help: 发送 /居所帮助 查看全部命令（命令必须带 /）
-version: 1.5.0
+version: 1.5.1
 author: towjf
 repo: https://github.com/towjf/astrbot_plugin_jusuo
 astrbot_version: ">=4.0.0"
