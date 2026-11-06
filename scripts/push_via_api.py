@@ -150,7 +150,10 @@ def main() -> int:
     if remote_head and not args.mirror:
         if remote_head in mapping.values():
             base = next(k for k, v in mapping.items() if v == remote_head)
-            print(f"远端 {remote_head[:8]} 对应本地 {base[:8]}（来自映射表），在其后增量推送")
+            print(
+                f"远端 {remote_head[:8]} 对应本地 {base[:8]}（来自映射表），在其后增量推送；"
+                "新提交的父提交用远端 SHA"
+            )
         elif subprocess.run(
             ["git", "merge-base", "--is-ancestor", remote_head, local_head],
             cwd=ROOT,
@@ -189,7 +192,8 @@ def main() -> int:
         print("空仓库已初始化")
 
     blob_cache: dict[str, str] = {}
-    parent = base or None
+    # 第一个新提交的父提交必须是**远端**的 SHA：base 是本地 SHA，远端可能不同
+    parent = None if mirror else (remote_head or None)
     for index, sha in enumerate(commits, 1):
         message = git("log", "-1", "--pretty=%B", sha).rstrip("\n")
         items = []
